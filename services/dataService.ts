@@ -1,6 +1,6 @@
 
 import { ShiftData, User } from '../types';
-import { STORAGE_KEYS, DEFAULT_ADMIN_USER } from '../constants';
+import { STORAGE_KEYS } from '../constants';
 
 // --- Shift Management ---
 
@@ -38,10 +38,12 @@ export const getUsers = (): User[] => {
   if (data) {
     return JSON.parse(data);
   }
-  // Initialize with default admin if no users exist
-  const initialUsers = [DEFAULT_ADMIN_USER];
-  localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(initialUsers));
-  return initialUsers;
+  return [];
+};
+
+export const isSystemInitialized = (): boolean => {
+  const users = getUsers();
+  return users.length > 0;
 };
 
 export const addUser = (newUser: User): void => {
@@ -57,9 +59,11 @@ export const addUser = (newUser: User): void => {
 export const deleteUser = (userId: string): void => {
   const users = getUsers();
   // Prevent deleting the last admin
+  const admins = users.filter(u => u.role === 'مدير'); // Assuming 'مدير' is the string value for Admin role
   const userToDelete = users.find(u => u.id === userId);
-  if (userToDelete?.username === 'admin') {
-    throw new Error('لا يمكن حذف المدير العام الأساسي');
+  
+  if (userToDelete?.role === 'مدير' && admins.length <= 1) {
+    throw new Error('لا يمكن حذف المدير الوحيد في النظام');
   }
   
   const updatedUsers = users.filter(u => u.id !== userId);
@@ -74,9 +78,9 @@ export const createBackup = (): string => {
 
   const backupData = {
     shifts: shifts ? JSON.parse(shifts) : [],
-    users: users ? JSON.parse(users) : [DEFAULT_ADMIN_USER],
+    users: users ? JSON.parse(users) : [],
     exportDate: new Date().toISOString(),
-    systemVersion: '1.0'
+    systemVersion: '1.1'
   };
 
   return JSON.stringify(backupData, null, 2);
